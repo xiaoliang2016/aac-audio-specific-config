@@ -6,7 +6,7 @@
 #include <string.h>
 #include "LogRecord.h"
 
-static char* loglevelstr[5] = {"DEBUG", "INFOR", "WARNG", "ERROR", "FATAL"};
+static const char* loglevelstr[5] = {"DEBUG", "INFOR", "WARNG", "ERROR", "FATAL"};
 
 LogInfor* InitiLogger (char* logpath, LogLevel level, I32 maxlen)
 {
@@ -14,21 +14,28 @@ LogInfor* InitiLogger (char* logpath, LogLevel level, I32 maxlen)
     char* path = NULL;
     FILE* fp = NULL;
 
-    fp = fopen(logpath, "a+");
-    if (fp == NULL)
+    logger = (LogInfor*)malloc(sizeof(LogInfor));
+    if (logger == NULL)
     {
         return NULL;
     }
 
     if (logpath == NULL)
     {
-        return NULL;
+        fp = stdout;
+        path = NULL;
     }
-
-    path = (char*)malloc(strlen(logpath) + 1);
-    strcpy(path, logpath);
-
-    logger = (LogInfor*)malloc(sizeof(LogInfor));
+    else
+    {
+        path = (char*)malloc(strlen(logpath) + 1);
+        strcpy(path, logpath);
+        fp = fopen(path, "a+");
+        if (fp == NULL)
+        {
+            free(path); path=NULL;
+            return NULL;
+        }
+    }
 
     logger->fileptr = fp;
     logger->path    = path;
@@ -36,23 +43,20 @@ LogInfor* InitiLogger (char* logpath, LogLevel level, I32 maxlen)
     logger->maxlen  = maxlen;
     if (sem_init(&logger->logging, 0, 1) != 0)
     {
-        free(logger);
+        free(logger);logger=NULL;
         return NULL;
     }
     return logger;
 }
 LogInfor* CloseLogger (LogInfor* logger)
 {
-    if (logger == NULL)
+    if (logger != NULL)
     {
-        return logger;
+        fclose(logger->fileptr);logger->fileptr=NULL;
+        free(logger->path);logger->path=NULL;
+        sem_destroy(&logger->logging);
+        free(logger);logger=NULL;
     }
-    if (logger->fileptr != NULL)
-    {
-        fclose(logger->fileptr);
-    }
-    sem_destroy(&logger->logging);
-    free (logger);
     return NULL;
 }
 void RecordALog (LogInfor* logger, LogLevel level, const char* format, ...)
@@ -60,22 +64,13 @@ void RecordALog (LogInfor* logger, LogLevel level, const char* format, ...)
     time_t     rawTime;
     struct tm *timeInfo;
 
-    if (sem_wait(&logger->logging) < 0)
+    if ((logger == NULL) || (logger->fileptr == NULL) || (sem_wait(&logger->logging) < 0)\
+        || (level < logger->level))
     {
         return ;
     }
 
-    if (logger == NULL || logger->fileptr == NULL)
-    {
-        return ;
-    }
-
-    if (level < logger->level)
-    {
-        return ;
-    }
-
-    if (ftell(logger->fileptr) >= MAX_LOG_FILE_LENS)
+    if ((ftell(logger->fileptr) >= MAX_LOG_FILE_LENS) && (logger->fileptr != stdout))
     {
         ClrLogFile(logger);
         if (logger->fileptr == NULL)
@@ -107,4 +102,3 @@ void ClrLogFile (LogInfor* logger)
     fclose (logger->fileptr);
     logger->fileptr = fopen(logger->path, "a+");
 }
-

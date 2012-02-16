@@ -14,13 +14,14 @@ int  AudioSpecificConfigParse(UI8* data, I32 length)
     UI32 sampling_frequency     = 0U;
     UI8  channel_configuration  = 0U;
 
+    /// Initialize BitBuffer
     bitbuf = InitiBitBuffer(data, length);
     if (bitbuf == NULL)
     {
         return FAIL;
     }
 
-    ret = GetDataFromBitBuffer(bitbuf, 5, (I64*)&audio_object_type);
+    ret = GetDataFromBitBuffer(bitbuf, 5, (UI64*)&audio_object_type);
     if (ret == FAIL)
     {
         return FAIL;
@@ -28,25 +29,24 @@ int  AudioSpecificConfigParse(UI8* data, I32 length)
 
     if (audio_object_type == 0x1F)
     {
-        ret = GetDataFromBitBuffer(bitbuf, 6, (I64*)&audio_object_type_ext);
+        ret = GetDataFromBitBuffer(bitbuf, 6, (UI64*)&audio_object_type_ext);
         if (ret == FAIL)
         {
             return FAIL;
         }
     }
 
-    ret = GetDataFromBitBuffer(bitbuf, 4, (I64*)&sampling_frequency_ind);
+    ret = GetDataFromBitBuffer(bitbuf, 4, (UI64*)&sampling_frequency_ind);
     if (ret == FAIL)
     {
         return FAIL;
     }
     if (sampling_frequency_ind == 0x0F)
     {
-        ret = GetDataFromBitBuffer(bitbuf, 24, (I64*)&sampling_frequency);
+        ret = GetDataFromBitBuffer(bitbuf, 24, (UI64*)&sampling_frequency);
         if (ret == FAIL)
         {
             return FAIL;
         }
     }
-
 }
