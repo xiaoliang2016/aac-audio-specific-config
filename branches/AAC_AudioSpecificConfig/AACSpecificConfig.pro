@@ -4,6 +4,7 @@ HEADERS += \
     AACSpecificConfig.h
 
 SOURCES += \
+    TestRoutine.c \
     LogRecord.c \
     BitBuffer.c \
     AACSpecificConfig.c
