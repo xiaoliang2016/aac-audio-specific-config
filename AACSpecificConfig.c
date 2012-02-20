@@ -3,50 +3,91 @@
 #include <malloc.h>
 #include "BitBuffer.h"
 
-/// 传入AAC数据, 即FLV裸数据从第3个字节开始
-int  AudioSpecificConfigParse(UI8* data, I32 length)
+/// @brief 解析audio_object_type
+int ParseAudioObjectType (BitBuffer* bitbuff, UI8*  audio_object_type)
 {
-    int ret                     = SUCCESS;
-    BitBuffer* bitbuf           = NULL;
-    UI8  audio_object_type      = 0U;
-    UI8  audio_object_type_ext  = 0U;
-    UI8  sampling_frequency_ind = 0U;
-    UI32 sampling_frequency     = 0U;
-    UI8  channel_configuration  = 0U;
+    int ret = SUCCESS;
+    ret = GetDataFromBitBuffer(bitbuff, 5, (UI64*)audio_object_type);
+    if (ret == FAIL)
+    {
+        return FAIL;
+    }
+    if (*audio_object_type == 0x1F)
+    {
+        UI8 audio_object_type_ext;
+        ret = GetDataFromBitBuffer(bitbuf, 6, (UI64*)&audio_object_type_ext);
+        if (ret == FAIL)
+        {
+            return FAIL;
+        }
+        *audio_object_type = 32 + audio_object_type_ext;
+    }
+    return SUCCESS;
+}
 
-    /// Initialize BitBuffer
+/// @brief 解析AudioSpecificConfig
+int ParseAudioSpecificConfig(UI8* data, I32 length)
+{
+    int ret                         = SUCCESS;
+    BitBuffer* bitbuf               = NULL;
+
+    UI8  audio_object_type          = 0U;
+    UI8  sampling_frequency_index   = 0U;
+    UI32 sampling_frequency         = 0UL;
+    UI8  channel_configuration      = 0UL;
+    I8   sbr_present_flag           = -1;
+    I8   ps_present_flag            = -1;
+    UI8  ext_audio_object_type      = 0U;
+    UI8  ext_sampling_frequency_ind = 0U;
+    UI32 ext_sampling_frequency     = 0UL;
+    UI8  ext_channel_configuration  = 0U;
+
+    /// Create BitBuffer
     bitbuf = InitiBitBuffer(data, length);
     if (bitbuf == NULL)
     {
         return FAIL;
     }
 
-    ret = GetDataFromBitBuffer(bitbuf, 5, (UI64*)&audio_object_type);
+    ret = ParseAudioObjectType(bitbuf, &audio_object_type);
     if (ret == FAIL)
     {
         return FAIL;
     }
 
-    if (audio_object_type == 0x1F)
-    {
-        ret = GetDataFromBitBuffer(bitbuf, 6, (UI64*)&audio_object_type_ext);
-        if (ret == FAIL)
-        {
-            return FAIL;
-        }
-    }
+    ret = GetDataFromBitBuffer(bitbuf, 4, (UI64*)&sampling_frequency_index);
+    /// @todo
 
-    ret = GetDataFromBitBuffer(bitbuf, 4, (UI64*)&sampling_frequency_ind);
-    if (ret == FAIL)
-    {
-        return FAIL;
-    }
-    if (sampling_frequency_ind == 0x0F)
+    if (sampling_frequency_index == 0xF)
     {
         ret = GetDataFromBitBuffer(bitbuf, 24, (UI64*)&sampling_frequency);
-        if (ret == FAIL)
+        /// @todo
+    }
+
+    ret = GetDataFromBitBuffer(bitbuf, 4, (UI64*)&channel_configuration);
+    /// @todo
+
+    if (audio_object_type == 5 || audio_object_type == 29)
+    {
+        ext_audio_object_type = 5;
+        sbr_present_flag      = 1;
+        if (audio_object_type == 29)
         {
-            return FAIL;
+            ps_present_flag   = 1;
+        }
+        ret = GetDataFromBitBuffer(bitbuf, 4, (UI64*)&ext_sampling_frequency_ind);
+        /// @todo
+        if (ext_sampling_frequency_ind == 0xF)
+        {
+            ret = GetDataFromBitBuffer(bitbuf, 24, (UI64*)&ext_sampling_frequency);
+            /// @todo
+            ret = ParseAudioObjectType(bitbuf, &audio_object_type);
+            /// @todo
+            if (audio_object_type == 0x16)
+            {
+                ret = GetDataFromBitBuffer(bitbuf, 4, (UI64*)&)
+            }
         }
     }
+
 }
